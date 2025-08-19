@@ -1,4 +1,4 @@
-import PostCard from '@/components/PostCard'; // 카드 컴포넌트가 없다면 간단 텍스트로 대체
+import PostCard from '@/components/PostCard'; //카드 컴포넌트가 없다면 간단 텍스트로 대체
 import { MOCK_POSTS } from '@/constants/boards';
 import { useLocalSearchParams } from 'expo-router';
 import React from 'react';

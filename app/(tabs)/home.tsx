@@ -85,7 +85,7 @@ export default function Home() {
         <View style={styles.popularCard}>
           <View style={styles.popularHeaderRow}>
             <Ionicons name="flame-outline" size={18} color="#111" style={{ marginRight: 6 }} />
-            <Text style={styles.popularHeaderText}>인기 게시물</Text>
+            <Text style={styles.popularHeaderText}>인기 게시물 &gt;</Text>
             <Text style={styles.popularHeaderArrow}>›</Text>
           </View>
 
