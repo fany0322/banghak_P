@@ -1,6 +1,5 @@
 import { BOARDS } from '@/constants/boards'; // ← 너가 만든 상수 파일 경로 그대로
 import { Link } from 'expo-router';
-import React from 'react';
 import { FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function BoardHome() {
@@ -16,7 +15,7 @@ export default function BoardHome() {
         
         renderItem={({ item }) => (
           <Link
-            href={{ pathname: '/(tabs)/board/[boardId]/', params: { boardId: item.id } }}
+            href={{ pathname: '/(tabs)/boards/[boardId]/', params: { boardId: item.id } }}
             asChild
           >
             <TouchableOpacity style={styles.row}>
