@@ -1,29 +1,60 @@
-import PostCard from '@/components/PostCard'; //카드 컴포넌트가 없다면 간단 텍스트로 대체
-import { MOCK_POSTS } from '@/constants/boards';
-import { useLocalSearchParams } from 'expo-router';
-import React from 'react';
-import { FlatList, SafeAreaView, StyleSheet } from 'react-native';
+// app/boards/[boardId]/index.tsx
+import { usePosts } from "@/context/PostContext";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function BoardDetail() {
   const { boardId } = useLocalSearchParams<{ boardId: string }>();
+  const { posts } = usePosts();
+  const router = useRouter();
 
-  const posts = React.useMemo(() => {
-    const arr = Array.isArray(MOCK_POSTS) ? MOCK_POSTS : [];
-    return arr.filter((p) => p.boardId === String(boardId));
-  }, [boardId]);
+  const boardPosts = posts.filter((p: any) => p.boardId === boardId);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={s.container}>
       <FlatList
-        data={posts}
-        keyExtractor={(item) => String(item.id)}
+        data={boardPosts}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 12 }}
-        renderItem={({ item }) => <PostCard post={item} />}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={s.card}
+            onPress={() => router.push(`/boards/${boardId}/${item.id}`)}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.title}>{item.title}</Text>
+              <Text numberOfLines={2} style={s.content}>{item.content}</Text>
+              <Text style={s.meta}>{item.time} · ❤️ {item.likes} · 💬 {item.comments.length}</Text>
+            </View>
+            {item.image && <Image source={{ uri: item.image }} style={s.thumb} />}
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={<Text style={{ padding: 20 }}>게시글이 없습니다.</Text>}
       />
+
+      <TouchableOpacity style={s.fab} onPress={() => router.push(`/boards/${boardId}/write`)}>
+        <Text style={{ fontSize: 28, color: "#fff" }}>＋</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f6f6f6' },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#f6f6f6" },
+  card: { flexDirection: "row", backgroundColor: "#fff", padding: 12, marginBottom: 10, borderRadius: 8 },
+  title: { fontSize: 15, fontWeight: "600", marginBottom: 4 },
+  content: { fontSize: 13, color: "#444", marginBottom: 6 },
+  meta: { fontSize: 12, color: "#777" },
+  thumb: { width: 60, height: 60, marginLeft: 10, borderRadius: 8 },
+  fab: {
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#333",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });

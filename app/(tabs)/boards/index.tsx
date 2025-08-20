@@ -1,47 +1,36 @@
-import { BOARDS } from '@/constants/boards'; // ← 너가 만든 상수 파일 경로 그대로
-import { Link } from 'expo-router';
-import { FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Link } from "expo-router";
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default function BoardHome() {
+export default function BoardList() {
+  const boards = [
+    { id: "1", name: "자유 게시판" },
+    { id: "2", name: "질문 게시판" },
+    { id: "3", name: "스크랩 한 글" },
+    { id: "4", name: "핫 게시판" },
+  ];
+
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={BOARDS}
-        keyExtractor={(item) => String(item.id)}
-        
-        contentContainerStyle={{ padding: 16 }}
-        
-        
-        
-        renderItem={({ item }) => (
-          <Link
-            href={{ pathname: '/(tabs)/boards/[boardId]/', params: { boardId: item.id } }}
-            asChild
-          >
-            <TouchableOpacity style={styles.row}>
-              <Text style={styles.title}>{item.name}</Text>
-              <Text style={styles.desc} numberOfLines={1}>{item.description}</Text>
-            </TouchableOpacity>
-          </Link>
-        )}
-        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-      />
+    <SafeAreaView style={s.container}>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <Text style={s.sectionLabel}>게시판 목록</Text>
+        <View style={s.box}>
+          {boards.map((b) => (
+            <Link key={b.id} href={`/boards/${b.id}`} asChild>
+              <TouchableOpacity style={s.boardButton}>
+                <Text style={s.boardText}>{b.name}</Text>
+              </TouchableOpacity>
+            </Link>
+          ))}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7f7f9' },
-  row: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  title: { fontSize: 16, fontWeight: '600', marginBottom: 6 },
-  desc: { color: '#666' },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#f6f6f6" },
+  sectionLabel: { fontSize: 14, marginBottom: 8, color: "#555" },
+  box: { backgroundColor: "#fff", borderRadius: 8, padding: 12 },
+  boardButton: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#eee" },
+  boardText: { fontSize: 16 },
 });
