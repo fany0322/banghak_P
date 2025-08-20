@@ -1,3 +1,5 @@
+// FILE: app/(tabs)/calendar.tsx
+import { COLORS, useEventsStore } from '@/stores/eventsStore'
 import { useMemo, useState } from 'react'
 import { FlatList, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Calendar } from 'react-native-calendars'
@@ -5,10 +7,6 @@ import Modal from 'react-native-modal'
 
 const PASTEL_BLUE = '#E8F1FF'
 const ACCENT_BLUE = '#5AA9FF'
-const COLORS = ['#ff3b30', '#007aff', '#34c759', '#ff9500', '#af52de']
-
-type EventItem = { text: string; color: string }
-type Events = Record<string, EventItem[]>
 
 function todayISO() {
   const d = new Date()
@@ -19,9 +17,7 @@ function todayISO() {
 }
 
 export default function CalendarTab() {
-  const [selected, setSelected] = useState<string>('')
-  const [events, setEvents] = useState<Events>({})
-  const [marked, setMarked] = useState<Record<string, any>>({})
+  const { events, marked, selectedDate, setSelectedDate, addEvent, changeEventColor } = useEventsStore()
   const [isModalVisible, setModalVisible] = useState(false)
   const [input, setInput] = useState('')
   const [selectedColor, setSelectedColor] = useState(COLORS[0])
@@ -30,43 +26,18 @@ export default function CalendarTab() {
   const today = useMemo(() => todayISO(), [])
 
   const onDayPress = (day: { dateString: string }) => {
-    setSelected(day.dateString)
+    setSelectedDate(day.dateString)
     setModalVisible(true)
     setEditingIndex(null)
   }
 
-  const refreshMarkedFor = (date: string, list: EventItem[]) => {
-    setMarked(prev => ({
-      ...prev,
-      [date]: {
-        marked: list.length > 0,
-        dots: list.map(e => ({ color: e.color })),
-        selected: true,
-        selectedColor: '#f2f2f7',
-      },
-    }))
-  }
-
-  const addEvent = () => {
-    if (!selected || !input.trim()) return
-    const list = [...(events[selected] || []), { text: input.trim(), color: selectedColor }]
-    const newEvents: Events = { ...events, [selected]: list }
-    setEvents(newEvents)
-    refreshMarkedFor(selected, list)
+  const onAdd = () => {
+    if (!selectedDate || !input.trim()) return
+    addEvent(selectedDate, input.trim(), selectedColor)
     setInput('')
     setSelectedColor(COLORS[0])
     setEditingIndex(null)
     setModalVisible(false)
-  }
-
-  const changeEventColor = (idx: number, color: string) => {
-    if (!selected) return
-    const list = [...(events[selected] || [])]
-    if (!list[idx]) return
-    list[idx] = { ...list[idx], color }
-    const newEvents = { ...events, [selected]: list }
-    setEvents(newEvents)
-    refreshMarkedFor(selected, list)
   }
 
   const todayEvents = events[today] || []
@@ -90,14 +61,12 @@ export default function CalendarTab() {
             selectedDayBackgroundColor: ACCENT_BLUE,
             selectedDayTextColor: '#fff',
             arrowColor: '#111',
-            'stylesheet.calendar.main': {
-              monthView: { paddingHorizontal: 12, paddingBottom: 12 },
-            },
+            'stylesheet.calendar.main': { monthView: { paddingHorizontal: 12, paddingBottom: 12 } },
           }}
+          current={selectedDate ?? undefined}
         />
       </View>
 
-      {/* 오늘 일정만 표시 (선택한 날짜 텍스트 없음) */}
       <View style={s.todayBox}>
         <Text style={s.todayTitle}>오늘 일정</Text>
         {todayEvents.length ? (
@@ -117,24 +86,17 @@ export default function CalendarTab() {
         )}
       </View>
 
-      {/* 모달 그대로 */}
-      <Modal
-        isVisible={isModalVisible}
-        onBackdropPress={() => setModalVisible(false)}
-        style={s.modal}
-      >
+      <Modal isVisible={isModalVisible} onBackdropPress={() => setModalVisible(false)} style={s.modal}>
         <View style={s.sheet}>
-          <Text style={s.sheetTitle}>📅 {selected || '날짜 선택'} 일정 추가</Text>
-
+          <Text style={s.sheetTitle}>📅 {selectedDate || '날짜 선택'} 일정 추가</Text>
           <TextInput
             style={s.input}
             placeholder="일정을 입력하세요"
             value={input}
             onChangeText={setInput}
             returnKeyType="done"
-            onSubmitEditing={addEvent}
+            onSubmitEditing={onAdd}
           />
-
           <Text style={s.colorLabel}>색상 선택</Text>
           <View style={s.colorRow}>
             {COLORS.map(color => (
@@ -148,15 +110,14 @@ export default function CalendarTab() {
               />
             ))}
           </View>
-
-          <TouchableOpacity style={s.addBtn} onPress={addEvent}>
+          <TouchableOpacity style={s.addBtn} onPress={onAdd}>
             <Text style={s.addBtnText}>추가하기</Text>
           </TouchableOpacity>
 
-          {!!events[selected]?.length && (
+          {!!(selectedDate && events[selectedDate]?.length) && (
             <View style={{ marginTop: 14 }}>
               <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 6 }}>저장된 일정</Text>
-              {events[selected]!.map((e, i) => (
+              {events[selectedDate]!.map((e, i) => (
                 <TouchableOpacity key={i} style={s.savedRow} onPress={() => setEditingIndex(i)}>
                   <View style={[s.dot, { backgroundColor: e.color }]} />
                   <Text style={s.savedText}>• {e.text}</Text>
@@ -171,7 +132,7 @@ export default function CalendarTab() {
                     {COLORS.map(color => (
                       <TouchableOpacity
                         key={color}
-                        onPress={() => changeEventColor(editingIndex, color)}
+                        onPress={() => selectedDate && changeEventColor(selectedDate, editingIndex, color)}
                         style={[s.colorBox, { backgroundColor: color, borderWidth: 2 }]}
                       />
                     ))}
@@ -189,14 +150,7 @@ export default function CalendarTab() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   calendarWrap: { backgroundColor: PASTEL_BLUE, paddingTop: 8, paddingBottom: 6 },
-  calendar: {
-    height: 420,
-    width: '100%',
-    alignSelf: 'stretch',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
+  calendar: { height: 420, width: '100%', alignSelf: 'stretch', backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
   todayBox: { flex: 1, paddingHorizontal: 16, paddingTop: 10 },
   todayTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
   todayEmpty: { color: '#8e8e93' },

@@ -1,11 +1,11 @@
-// app/_layout.tsx
 import { Stack } from "expo-router";
-import { PostProvider } from "../context/PostContext"; // 경로 주의
+import { PostProvider } from "../context/PostContext";
 
 export default function RootLayout() {
   return (
     <PostProvider>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack>
+        {/* 탭 그룹 */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
     </PostProvider>
