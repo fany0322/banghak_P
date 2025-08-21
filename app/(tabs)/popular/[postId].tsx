@@ -58,7 +58,7 @@ export default function PopularDetail() {
         <View style={dStyles.metaRow}>
           <Text style={dStyles.metaText}>{post.author}</Text>
           <Text style={dStyles.dot}>·</Text>
-          <Text style={dStyles.metaText}>{post.date}</Text>
+          <Text style={dStyles.metaText}>{post.date}</Text> 
         </View>
 
         {/* 본문 */}

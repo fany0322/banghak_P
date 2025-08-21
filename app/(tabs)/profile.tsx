@@ -7,14 +7,11 @@ const SECTION_1 = [
   { label: '차단 목록',            icon: 'ban' },
   { label: '작성한 글',            icon: 'create-outline' },
   { label: '추천 / 비추천 한 글',   icon: 'thumbs-up-outline' },
-  { label: '설정',                 icon: 'settings-outline' },
 ];
 
 const SECTION_2 = [
   { label: '설정', icon: 'options-outline' },
-  { label: '설정', icon: 'notifications-outline' },
-  { label: '설정', icon: 'color-palette-outline' },
-  { label: '설정', icon: 'shield-checkmark-outline' },
+  { label: '설정', icon: 'notifications-outline' }
 ];
 
 export default function Profile() {
