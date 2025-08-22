@@ -32,10 +32,10 @@ const NOTICE = {
 };
 
 const BOARD_TITLES: Record<string, string> = {
-  1: "자유 게시판",
-  question: "질문 게시판",
-  scrap: "스크랩 한 글",
-  hot: "핫 게시판",
+  free: "자유 게시판",
+  qna: "질문 게시판", 
+  study: "학습 게시판",
+  hot: "인기 게시판",
   // 필요시 추가
 };
 
@@ -56,23 +56,24 @@ export default function BoardDetail() {
 
   // 보드 ID에 따른 카테고리 매핑 (백엔드와 일치하도록 수정)
   const categoryMap: Record<string, string> = {
-    '1': '', // 전체 게시글 (카테고리 필터 없음)
-    '2': 'general',
-    '3': 'question', 
-    '4': 'general'
+    'free': 'general',     // 자유 게시판 -> general 카테고리
+    'qna': 'question',     // 질문 게시판 -> question 카테고리  
+    'study': 'study',      // 학습 게시판 -> study 카테고리
+    'hot': ''              // 인기 게시판 -> 전체 게시글에서 인기순 정렬
   };
 
   const category = categoryMap[String(boardId)] || '';
+  const sortType = String(boardId) === 'hot' ? 'popular' : 'latest';
 
   // --- PostContext를 사용해서 게시글 불러오기
   const loadPosts = useCallback(async () => {
     try {
-      console.log('Loading posts for boardId:', boardId, 'category:', category);
-      await getPosts(category, 'latest');
+      console.log('Loading posts for boardId:', boardId, 'category:', category, 'sortType:', sortType);
+      await getPosts(category, sortType);
     } catch (e) {
       console.warn('Failed to load posts:', e);
     }
-  }, [getPosts, category, boardId]);
+  }, [getPosts, category, boardId, sortType]);
 
   // 최초 로드만 (한 번만)
   useEffect(() => {

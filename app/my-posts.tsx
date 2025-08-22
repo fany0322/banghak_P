@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, SafeAreaView, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { apiService, Post } from '@/services/api';
@@ -32,38 +32,76 @@ export default function MyPostsScreen() {
     setRefreshing(false);
   };
 
+  const handleDeletePost = async (postId: number, title: string) => {
+    Alert.alert(
+      '게시글 삭제',
+      `"${title}"을(를) 삭제하시겠습니까?\n삭제된 게시글은 복구할 수 없습니다.`,
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiService.deletePost(postId);
+              Alert.alert('삭제 완료', '게시글이 삭제되었습니다.');
+              // 목록 새로고침
+              await loadMyPosts();
+            } catch (error) {
+              console.error('Failed to delete post:', error);
+              Alert.alert('삭제 실패', '게시글 삭제에 실패했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   useEffect(() => {
     loadMyPosts();
   }, [isLoggedIn]);
 
   const renderPost = ({ item }: { item: Post }) => (
-    <Pressable
-      style={styles.postCard}
-      onPress={() => router.push(`/boards/1/${item.id}`)} // 기본 게시판으로 이동
-    >
-      <Text style={styles.postTitle} numberOfLines={1}>{item.title}</Text>
-      <Text style={styles.postContent} numberOfLines={2}>{item.content}</Text>
-      
-      <View style={styles.postMeta}>
-        <Text style={styles.postDate}>
-          {new Date(item.created_at).toLocaleDateString()}
-        </Text>
-        <View style={styles.postStats}>
-          <View style={styles.statItem}>
-            <Ionicons name="eye-outline" size={14} color="#666" />
-            <Text style={styles.statText}>{item.view_count}</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons name="chatbubble-outline" size={14} color="#666" />
-            <Text style={styles.statText}>{item.comment_count}</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons name="thumbs-up-outline" size={14} color="#666" />
-            <Text style={styles.statText}>{item.upvotes}</Text>
+    <View style={styles.postCard}>
+      <Pressable
+        style={styles.postContent}
+        onPress={() => router.push(`/boards/1/${item.id}`)} // 기본 게시판으로 이동
+      >
+        <Text style={styles.postTitle} numberOfLines={1}>{item.title}</Text>
+        <Text style={styles.postText} numberOfLines={2}>{item.content}</Text>
+        
+        <View style={styles.postMeta}>
+          <Text style={styles.postDate}>
+            {new Date(item.created_at).toLocaleDateString()}
+          </Text>
+          <View style={styles.postStats}>
+            <View style={styles.statItem}>
+              <Ionicons name="eye-outline" size={14} color="#666" />
+              <Text style={styles.statText}>{item.view_count}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="chatbubble-outline" size={14} color="#666" />
+              <Text style={styles.statText}>{item.comment_count}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="thumbs-up-outline" size={14} color="#22c55e" />
+              <Text style={styles.statText}>{item.upvotes}</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </Pressable>
+      </Pressable>
+      
+      {/* 삭제 버튼 */}
+      <Pressable
+        style={styles.deleteButton}
+        onPress={() => handleDeletePost(item.id, item.title)}
+      >
+        <Ionicons name="trash-outline" size={20} color="#ef4444" />
+      </Pressable>
+    </View>
   );
 
   if (!isLoggedIn) {
@@ -156,7 +194,6 @@ const styles = StyleSheet.create({
   },
   postCard: {
     backgroundColor: '#fff',
-    padding: 16,
     marginBottom: 12,
     borderRadius: 12,
     shadowColor: '#000',
@@ -167,6 +204,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  postContent: {
+    flex: 1,
+    padding: 16,
+  },
+  deleteButton: {
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   postTitle: {
     fontSize: 16,
@@ -174,7 +222,7 @@ const styles = StyleSheet.create({
     color: '#000',
     marginBottom: 8,
   },
-  postContent: {
+  postText: {
     fontSize: 14,
     color: '#666',
     lineHeight: 20,

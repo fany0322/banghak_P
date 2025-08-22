@@ -113,7 +113,7 @@ export default function PostDetail() {
               }
             }}
           >
-            <Ionicons name="thumbs-up-outline" size={22} color="#ff4444" />
+            <Ionicons name="thumbs-up-outline" size={22} color="#22c55e" />
           </Pressable>
           
           <Pressable 
@@ -133,12 +133,12 @@ export default function PostDetail() {
               }
             }}
           >
-            <Ionicons name="thumbs-down-outline" size={22} color="#4444ff" />
+            <Ionicons name="thumbs-down-outline" size={22} color="#ef4444" />
           </Pressable>
         </View>
         <View style={s.voteCounts}>
-          <Text style={[s.voteNum, { color: '#ff4444' }]}>👍 {post.upvotes || 0}</Text>
-          <Text style={[s.voteNum, { color: '#4444ff', marginLeft: 16 }]}>👎 {post.downvotes || 0}</Text>
+          <Text style={[s.voteNum, { color: '#22c55e' }]}>👍 {post.upvotes || 0}</Text>
+          <Text style={[s.voteNum, { color: '#ef4444', marginLeft: 16 }]}>👎 {post.downvotes || 0}</Text>
         </View>
 
         <Text style={s.commentHeader}>댓글 {post.comments?.length ?? 0}개</Text>

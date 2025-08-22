@@ -1,7 +1,7 @@
 // FILE: app/(tabs)/calendar.tsx
 import { COLORS, useEventsStore } from '@/stores/eventsStore'
-import { useMemo, useState } from 'react'
-import { FlatList, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { useMemo, useState, useEffect } from 'react'
+import { FlatList, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator } from 'react-native'
 import { Calendar } from 'react-native-calendars'
 import Modal from 'react-native-modal'
 
@@ -17,13 +17,29 @@ function todayISO() {
 }
 
 export default function CalendarTab() {
-  const { events, marked, selectedDate, setSelectedDate, addEvent, changeEventColor } = useEventsStore()
+  const { 
+    events, 
+    marked, 
+    selectedDate, 
+    isLoading, 
+    setSelectedDate, 
+    addEvent, 
+    deleteEvent, 
+    changeEventColor, 
+    loadEventsFromServer 
+  } = useEventsStore()
+  
   const [isModalVisible, setModalVisible] = useState(false)
   const [input, setInput] = useState('')
-  const [selectedColor, setSelectedColor] = useState(COLORS[0])
+  const [selectedColor, setSelectedColor] = useState<typeof COLORS[number]>(COLORS[0])
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
 
   const today = useMemo(() => todayISO(), [])
+
+  // 컴포넌트 마운트 시 서버에서 이벤트 로드
+  useEffect(() => {
+    loadEventsFromServer()
+  }, [loadEventsFromServer])
 
   const onDayPress = (day: { dateString: string }) => {
     setSelectedDate(day.dateString)
@@ -31,13 +47,41 @@ export default function CalendarTab() {
     setEditingIndex(null)
   }
 
-  const onAdd = () => {
+  const onAdd = async () => {
     if (!selectedDate || !input.trim()) return
-    addEvent(selectedDate, input.trim(), selectedColor)
-    setInput('')
-    setSelectedColor(COLORS[0])
-    setEditingIndex(null)
-    setModalVisible(false)
+    
+    try {
+      await addEvent(selectedDate, input.trim(), selectedColor)
+      setInput('')
+      setSelectedColor(COLORS[0])
+      setEditingIndex(null)
+      setModalVisible(false)
+    } catch (error) {
+      Alert.alert('오류', '일정 추가에 실패했습니다.')
+    }
+  }
+
+  const onDeleteEvent = async (eventId: number) => {
+    if (!selectedDate) return
+    
+    Alert.alert(
+      '삭제 확인',
+      '이 일정을 삭제하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '삭제', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteEvent(selectedDate, eventId)
+            } catch (error) {
+              Alert.alert('오류', '일정 삭제에 실패했습니다.')
+            }
+          }
+        }
+      ]
+    )
   }
 
   const todayEvents = events[today] || []
@@ -61,7 +105,6 @@ export default function CalendarTab() {
             selectedDayBackgroundColor: ACCENT_BLUE,
             selectedDayTextColor: '#fff',
             arrowColor: '#111',
-            'stylesheet.calendar.main': { monthView: { paddingHorizontal: 12, paddingBottom: 12 } },
           }}
           current={selectedDate ?? undefined}
         />
@@ -69,7 +112,9 @@ export default function CalendarTab() {
 
       <View style={s.todayBox}>
         <Text style={s.todayTitle}>오늘 일정</Text>
-        {todayEvents.length ? (
+        {isLoading ? (
+          <ActivityIndicator size="small" color={ACCENT_BLUE} style={{ marginTop: 20 }} />
+        ) : todayEvents.length ? (
           <FlatList
             data={todayEvents}
             keyExtractor={(_, i) => `${today}-${i}`}
@@ -110,19 +155,36 @@ export default function CalendarTab() {
               />
             ))}
           </View>
-          <TouchableOpacity style={s.addBtn} onPress={onAdd}>
-            <Text style={s.addBtnText}>추가하기</Text>
+          <TouchableOpacity style={s.addBtn} onPress={onAdd} disabled={isLoading}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={s.addBtnText}>추가하기</Text>
+            )}
           </TouchableOpacity>
 
           {!!(selectedDate && events[selectedDate]?.length) && (
             <View style={{ marginTop: 14 }}>
               <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 6 }}>저장된 일정</Text>
               {events[selectedDate]!.map((e, i) => (
-                <TouchableOpacity key={i} style={s.savedRow} onPress={() => setEditingIndex(i)}>
-                  <View style={[s.dot, { backgroundColor: e.color }]} />
-                  <Text style={s.savedText}>• {e.text}</Text>
-                  {editingIndex === i && <Text style={s.editBadge}>편집중</Text>}
-                </TouchableOpacity>
+                <View key={i} style={s.savedRow}>
+                  <TouchableOpacity 
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+                    onPress={() => setEditingIndex(i)}
+                  >
+                    <View style={[s.dot, { backgroundColor: e.color }]} />
+                    <Text style={s.savedText}>• {e.text}</Text>
+                    {editingIndex === i && <Text style={s.editBadge}>편집중</Text>}
+                  </TouchableOpacity>
+                  {e.id && (
+                    <TouchableOpacity 
+                      style={s.deleteBtn}
+                      onPress={() => onDeleteEvent(e.id!)}
+                    >
+                      <Text style={s.deleteBtnText}>삭제</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               ))}
 
               {editingIndex !== null && (
@@ -167,7 +229,9 @@ const s = StyleSheet.create({
   colorBox: { width: 40, height: 40, borderRadius: 20, borderColor: '#000' },
   addBtn: { backgroundColor: ACCENT_BLUE, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
   addBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  savedRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
+  savedRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, justifyContent: 'space-between' },
   savedText: { fontSize: 16, flexShrink: 1 },
   editBadge: { marginLeft: 8, fontSize: 12, color: '#fff', backgroundColor: '#111', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  deleteBtn: { backgroundColor: '#ff3b30', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginLeft: 8 },
+  deleteBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 })

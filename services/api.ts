@@ -273,6 +273,12 @@ class ApiService {
     });
   }
 
+  async deletePost(postId: number): Promise<{ message: string }> {
+    return this.makeRequest(`/posts/${postId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Comments
   async getComments(postId: number): Promise<{ comments: Comment[]; total: number }> {
     return this.makeRequest(`/posts/${postId}/comments`);
@@ -407,6 +413,50 @@ class ApiService {
 
   async getCategories(): Promise<Array<{ id: number; name: string; description: string }>> {
     return this.makeRequest('/categories');
+  }
+
+  // Calendar Events (using Assignment API)
+  async getCalendarEvents(): Promise<Array<{
+    id: number;
+    title: string;
+    due_date: string;
+    description?: string;
+  }>> {
+    try {
+      const result = await this.getAssignments(1, '일정', undefined, false);
+      return result.assignments.map(assignment => ({
+        id: assignment.id,
+        title: assignment.title,
+        due_date: assignment.due_date,
+        description: assignment.description
+      }));
+    } catch (error) {
+      console.error('Failed to get calendar events:', error);
+      return [];
+    }
+  }
+
+  async createCalendarEvent(data: {
+    title: string;
+    date: string;
+    description?: string;
+  }): Promise<{ id: number; message: string }> {
+    // 시간을 23:59:59로 설정해서 해당 날짜의 끝으로 설정
+    const due_date = `${data.date}T23:59:59`;
+    
+    return this.createAssignment({
+      title: data.title,
+      subject: '일정',
+      description: data.description,
+      due_date: due_date,
+      is_shared: true
+    });
+  }
+
+  async deleteCalendarEvent(eventId: number): Promise<void> {
+    return this.makeRequest(`/assignments/${eventId}`, {
+      method: 'DELETE'
+    });
   }
 }
 

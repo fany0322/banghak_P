@@ -6,6 +6,7 @@ import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { ActivityIndicator, Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { apiService } from '@/services/api';
+import { useFocusEffect } from 'expo-router';
 
 // ====== 타입 정의 ======
 type EventItem = {
@@ -55,7 +56,12 @@ type PopularPost = {
 export default function Home() {
   const router = useRouter();
   const { user, isLoggedIn } = useAuth();
-  const { bulkImportFromServer, setSelectedDate } = useEventsStore(); // 캘린더 연동
+  const { 
+    events: calendarEvents, 
+    bulkImportFromServer, 
+    setSelectedDate, 
+    loadEventsFromServer 
+  } = useEventsStore(); // 캘린더 연동
 
   // Home 카드 전용 상태
   const [events, setEvents] = useState<EventItem[] | null>(null);
@@ -66,36 +72,71 @@ export default function Home() {
   const [popularPosts, setPopularPosts] = useState<PopularPost[]>([]);
   const [popularLoading, setPopularLoading] = useState(false);
 
+  // 캘린더 이벤트를 홈화면용 EventItem 형식으로 변환
+  const convertCalendarEventsToEventItems = useCallback((calendarEvents: Record<string, any>) => {
+    const events: EventItem[] = [];
+    
+    Object.entries(calendarEvents).forEach(([dateISO, dayEvents]) => {
+      if (Array.isArray(dayEvents)) {
+        dayEvents.forEach((event: any) => {
+          // 미래 일정만 포함
+          const eventDate = new Date(dateISO);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          if (eventDate >= today) {
+            events.push({
+              id: event.id?.toString() || `${dateISO}-${event.text}`,
+              title: event.text,
+              dateISO: dateISO
+            });
+          }
+        });
+      }
+    });
+    
+    // 날짜순 정렬
+    return events.sort((a, b) => +new Date(a.dateISO) - +new Date(b.dateISO));
+  }, []);
+
+  // 캘린더 이벤트 변경 시 홈화면 이벤트 업데이트
+  useEffect(() => {
+    if (Object.keys(calendarEvents).length > 0) {
+      const convertedEvents = convertCalendarEventsToEventItems(calendarEvents);
+      setEvents(convertedEvents);
+    }
+  }, [calendarEvents, convertCalendarEventsToEventItems]);
   // "예정된 일정 >" 클릭 시 서버에서 로드 + 스토어 동기화
   const handleOpenUpcoming = useCallback(async () => {
     if (!isLoggedIn) return;
     
     setLoading(true);
     try {
-      // 백엔드에서 과제 데이터 가져오기
+      // 1. 캘린더 이벤트 로드 (이미 캘린더에서 생성된 일정들)
+      await loadEventsFromServer();
+      
+      // 2. 과제 데이터 가져오기 (Assignment API)
       const assignments = await apiService.getUpcomingAssignments();
       
-      // EventItem 형식으로 변환
-      const events: EventItem[] = assignments
+      // 과제를 ServerEvent 형식으로 변환해서 캘린더 스토어에 추가
+      const serverEvents = assignments
         .filter(assignment => {
-          // 마감일이 지나지 않은 과제만 필터링
           const dueDate = new Date(assignment.due_date);
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           return dueDate >= today;
         })
         .map(assignment => ({
-          id: assignment.id.toString(),
+          id: assignment.id,
           title: `${assignment.subject} - ${assignment.title}`,
-          dateISO: assignment.due_date.split('T')[0] // ISO 날짜 부분만 추출
-        }))
-        .sort((a, b) => +new Date(a.dateISO) - +new Date(b.dateISO));
+          due_date: assignment.due_date,
+          description: assignment.description
+        }));
 
-      setEvents(events);
-
-      // 전역 스토어(캘린더)에 입력
-      bulkImportFromServer(events);
-      if (events[0]) setSelectedDate(events[0].dateISO);
+      // 과제 데이터를 캘린더 스토어에 병합
+      if (serverEvents.length > 0) {
+        bulkImportFromServer(serverEvents);
+      }
 
       setExpandedMonth(null); // 기본은 3개 모드
     } catch (error) {
@@ -104,7 +145,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [bulkImportFromServer, setSelectedDate, isLoggedIn]);
+  }, [bulkImportFromServer, setSelectedDate, isLoggedIn, loadEventsFromServer]);
 
   // 오늘의 시간표 로드
   const loadTodaySchedule = useCallback(async () => {
@@ -203,10 +244,26 @@ export default function Home() {
     }
   }, [isLoggedIn, handleOpenUpcoming]);
 
+  // 컴포넌트 마운트 시 캘린더 이벤트 로드
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadEventsFromServer();
+    }
+  }, [isLoggedIn, loadEventsFromServer]);
+
+  // 화면에 포커스될 때마다 캘린더 이벤트 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoggedIn) {
+        loadEventsFromServer();
+      }
+    }, [isLoggedIn, loadEventsFromServer])
+  );
+
   // 파생 리스트
   const top3 = useMemo(() => (events ? events.slice(0, 3) : []), [events]);
   const monthAll = useMemo(() => {
-    if (!events?.length) return [] as ServerEvent[];
+    if (!events?.length) return [] as EventItem[];
     const key = expandedMonth ?? monthKey(events[0].dateISO);
     return events.filter((e) => monthKey(e.dateISO) === key);
   }, [events, expandedMonth]);
@@ -288,38 +345,30 @@ export default function Home() {
             </View>
           )}
 
-          {/* 아직 로드 전: 초기 더미(디자인 유지) */}
-          {!loading && !events && (
-            <>
-              {[
-                { dateISO: '2025-07-24', title: '영어 수행평가 (말하기)' },
-                { dateISO: '2025-07-25', title: '영어 수행평가 (쓰기)' },
-                { dateISO: '2025-08-01', title: '엄청나게 긴 이름의 수행평가를 적으면 말을 줄이기 (말을 줄이기)' },
-              ].map((e, i) => {
-                const isFirst = i === 0;
-                return (
-                  <View key={i} style={[styles.eventItem, !isFirst && styles.eventItemDivider, isFirst && styles.eventHighlight]}>
-                    <View style={styles.eventItemHeader}>
-                      <Text style={styles.eventDateText}>{toDisplayMD(e.dateISO)}</Text>
-                      <Text style={styles.eventDdayText}>{ddayLabel(e.dateISO)}</Text>
-                    </View>
-                    <Text style={[styles.eventNameText, isFirst && styles.eventNameHighlight]} numberOfLines={1} ellipsizeMode="tail">
-                      {e.title}
-                    </Text>
-                  </View>
-                );
-              })}
-              <Text style={styles.eventMoreDots}>···</Text>
-            </>
+          {/* 이벤트가 없을 때 표시 */}
+          {!loading && (!events || events.length === 0) && (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#666', fontSize: 14 }}>
+                {isLoggedIn ? '예정된 일정이 없습니다' : '로그인 후 일정을 확인하세요'}
+              </Text>
+            </View>
           )}
 
           {/* 서버 데이터 렌더 */}
-          {!loading && events && (
+          {!loading && events && events.length > 0 && (
             <>
               {eventList.map((e, i) => {
                 const isFirst = i === 0 && expandedMonth === null; // 접힘 모드: 첫 줄 강조
                 return (
-                  <View key={e.id} style={[styles.eventItem, i !== 0 && styles.eventItemDivider, isFirst && styles.eventHighlight]}>
+                  <Pressable 
+                    key={e.id} 
+                    style={[styles.eventItem, i !== 0 && styles.eventItemDivider, isFirst && styles.eventHighlight]}
+                    onPress={() => {
+                      // 캘린더 탭으로 이동하고 해당 날짜 선택
+                      setSelectedDate(e.dateISO);
+                      router.push('/(tabs)/calendar');
+                    }}
+                  >
                     <View style={styles.eventItemHeader}>
                       <Text style={styles.eventDateText}>{toDisplayMD(e.dateISO)}</Text>
                       <Text style={styles.eventDdayText}>{ddayLabel(e.dateISO)}</Text>
@@ -327,7 +376,7 @@ export default function Home() {
                     <Text style={[styles.eventNameText, isFirst && styles.eventNameHighlight]} numberOfLines={1} ellipsizeMode="tail">
                       {e.title}
                     </Text>
-                  </View>
+                  </Pressable>
                 );
               })}
 
@@ -345,7 +394,7 @@ export default function Home() {
         <View style={styles.popularCard}>
           <View style={styles.popularHeaderRow}>
             <Ionicons name="flame-outline" size={18} color="#111" style={{ marginRight: 6 }} />
-            <Pressable onPress={() => router.push('/popular')}>
+            <Pressable onPress={() => router.push('/(tabs)/popular')}>
               <Text style={styles.popularHeaderText}>인기 게시물 &gt;</Text>
             </Pressable>
           </View>
@@ -364,7 +413,7 @@ export default function Home() {
                   <View style={styles.popularMetaIcons}>
                     <Ionicons name="chatbubble-ellipses-outline" size={14} color="#3B82F6" />
                     <Text style={styles.popularMetaNum}>{post.comments}</Text>
-                    <Ionicons name="thumbs-up-outline" size={14} color="#FF4830" style={{ marginLeft: 10 }} />
+                    <Ionicons name="thumbs-up-outline" size={14} color="#22c55e" style={{ marginLeft: 10 }} />
                     <Text style={styles.popularMetaNum}>{post.likes}</Text>
                   </View>
                 </View>

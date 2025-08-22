@@ -73,11 +73,11 @@ export default function VotedPostsScreen() {
             <Text style={styles.statText}>{item.comment_count}</Text>
           </View>
           <View style={styles.statItem}>
-            <Ionicons name="thumbs-up-outline" size={14} color="#ff4444" />
+            <Ionicons name="thumbs-up-outline" size={14} color="#22c55e" />
             <Text style={styles.statText}>{item.upvotes}</Text>
           </View>
           <View style={styles.statItem}>
-            <Ionicons name="thumbs-down-outline" size={14} color="#4444ff" />
+            <Ionicons name="thumbs-down-outline" size={14} color="#ef4444" />
             <Text style={styles.statText}>{item.downvotes}</Text>
           </View>
         </View>

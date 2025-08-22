@@ -15,12 +15,12 @@ export default function WritePost() {
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 보드 ID에 따른 카테고리 매핑 (목록과 일치하도록 수정)
+  // 보드 ID에 따른 카테고리 매핑 (게시판 목록과 일치하도록 수정)
   const categoryMap: Record<string, string> = {
-    '1': 'general', // 자유 게시판
-    '2': 'general', // 일반 게시판
-    '3': 'question', // 질문 게시판
-    '4': 'general' // 기타
+    'free': 'general',     // 자유 게시판 -> general 카테고리
+    'qna': 'question',     // 질문 게시판 -> question 카테고리  
+    'study': 'study',      // 학습 게시판 -> study 카테고리
+    'hot': 'general'       // 인기 게시판 -> general (기본값)
   };
 
   const submit = async () => {

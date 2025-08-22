@@ -3,10 +3,10 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } fr
 
 export default function BoardList() {
   const boards = [
-    { id: "1", name: "자유 게시판" },
-    { id: "2", name: "질문 게시판" },
-    { id: "3", name: "스크랩 한 글" },
-    { id: "4", name: "핫 게시판" },
+    { id: "free", name: "자유 게시판", category: "general" },
+    { id: "qna", name: "질문 게시판", category: "question" },
+    { id: "study", name: "학습 게시판", category: "study" },
+    { id: "hot", name: "인기 게시판", category: "popular" },
   ];
 
   return (
