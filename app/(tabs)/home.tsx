@@ -433,22 +433,38 @@ export default function Home() {
 
 // ====== 스타일 ======
 const styles = StyleSheet.create({
-  rootContainer: { flex: 1, backgroundColor: '#f8f9fa' },
-  welcomeSection: { marginTop: 24, marginBottom: 16, paddingHorizontal: 20 },
-  welcomeText: { fontSize: 24, fontWeight: 'bold' },
-  loginPrompt: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rootContainer: { 
+    flex: 1, 
+    backgroundColor: '#f8fafc' 
+  },
+  welcomeSection: { 
+    marginTop: 32, 
+    marginBottom: 20, 
+    paddingHorizontal: 24 
+  },
+  welcomeText: { 
+    fontSize: 28, 
+    fontWeight: '700',
+    color: '#1e293b',
+    letterSpacing: -0.5
+  },
+  loginPrompt: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between' 
+  },
   loginButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    backgroundColor: '#667eea',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    shadowColor: '#667eea',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
   loginButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 
@@ -489,36 +505,185 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  scheduleHeader: { marginBottom: 8 },
-  classInfoText: { fontSize: 13, color: '#000', opacity: 0.7 },
-  scheduleTitle: { fontSize: 18, fontWeight: '600', marginBottom: 10 },
+  scheduleHeader: { 
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  classInfoText: { 
+    fontSize: 14, 
+    color: '#64748b',
+    fontWeight: '500'
+  },
+  scheduleTitle: { 
+    fontSize: 18, 
+    fontWeight: '600', 
+    color: '#3B82F6'
+  },
 
-  periodsRow: { paddingTop: 6, paddingBottom: 2 },
-  periodItem: { alignItems: 'center', marginRight: 12 },
-  periodTime: { fontWeight: '500', color: '#000000CC' },
-  periodSubject: { fontSize: 14, color: '#101010' },
+  periodsRow: { 
+    paddingTop: 12, 
+    paddingBottom: 8,
+    gap: 16
+  },
+  periodItem: { 
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    minWidth: 80,
+    borderLeftWidth: 3,
+    borderLeftColor: '#3B82F6'
+  },
+  periodTime: { 
+    fontWeight: '600', 
+    color: '#1e293b',
+    fontSize: 12,
+    marginBottom: 4
+  },
+  periodSubject: { 
+    fontSize: 14, 
+    color: '#475569',
+    fontWeight: '500',
+    textAlign: 'center'
+  },
 
-  eventTitleRow: { fontSize: 18, fontWeight: '500' },
-  eventItem: { paddingVertical: 14, borderRadius: 12, paddingHorizontal: 12 },
-  eventItemDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#eee', marginTop: 8 },
-  eventHighlight: { backgroundColor: '#FFEDEA' },
-  eventItemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  eventDateText: { fontSize: 18, fontWeight: '500' },
-  eventDdayText: { color: '#FF4830', fontWeight: '600' },
-  eventNameText: { fontSize: 18, fontWeight: '500' },
-  eventNameHighlight: { color: '#333' },
-  eventMoreDots: { textAlign: 'center', color: '#101010', marginTop: 6, fontSize: 18, fontWeight: '500' },
+  eventTitleRow: { 
+    fontSize: 18, 
+    fontWeight: '600',
+    color: '#1e293b'
+  },
+  eventItem: { 
+    paddingVertical: 16, 
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    marginBottom: 8
+  },
+  eventItemDivider: { 
+    borderTopWidth: 0
+  },
+  eventHighlight: { 
+    backgroundColor: '#fef3c7',
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b'
+  },
+  eventItemHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    marginBottom: 8
+  },
+  eventDateText: { 
+    fontSize: 16, 
+    fontWeight: '600',
+    color: '#374151'
+  },
+  eventDdayText: { 
+    color: '#dc2626', 
+    fontWeight: '700',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    fontSize: 12
+  },
+  eventNameText: { 
+    fontSize: 16, 
+    fontWeight: '600',
+    color: '#374151'
+  },
+  eventNameHighlight: { 
+    color: '#1f2937'
+  },
+  eventMoreDots: { 
+    textAlign: 'center', 
+    color: '#6b7280', 
+    marginTop: 12, 
+    fontSize: 16, 
+    fontWeight: '500',
+    backgroundColor: '#f9fafb',
+    paddingVertical: 8,
+    borderRadius: 8
+  },
 
-  popularHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  popularHeaderText: { fontSize: 18, fontWeight: '500' },
-  popularItemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
-  popularItemDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#eee' },
-  popularTitleText: { fontSize: 18, fontWeight: '600', color: '#111' },
-  popularExcerptText: { marginTop: 6, fontSize: 15, lineHeight: 20, color: '#555' },
-  popularMetaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
-  popularTimeText: { fontSize: 13, color: '#666', marginRight: 8 },
-  popularMetaIcons: { flexDirection: 'row', alignItems: 'center', marginLeft: 6 },
-  popularMetaNum: { fontSize: 13, color: '#444', marginLeft: 4 },
-  popularThumbImage: { width: 64, height: 88, borderRadius: 14 },
-  popularThumbPlaceholder: { width: 64, height: 88, borderRadius: 14, backgroundColor: '#D9B15E' },
+  popularHeaderRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: '#e5e7eb'
+  },
+  popularHeaderText: { 
+    fontSize: 18, 
+    fontWeight: '600',
+    color: '#1e293b'
+  },
+  popularItemRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+    marginBottom: 8,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2
+  },
+  popularItemDivider: { 
+    borderTopWidth: 0
+  },
+  popularTitleText: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: '#1f2937',
+    marginBottom: 4
+  },
+  popularExcerptText: { 
+    fontSize: 14, 
+    lineHeight: 20, 
+    color: '#6b7280',
+    marginBottom: 8
+  },
+  popularMetaRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between'
+  },
+  popularTimeText: { 
+    fontSize: 12, 
+    color: '#9ca3af',
+    fontWeight: '500'
+  },
+  popularMetaIcons: { 
+    flexDirection: 'row', 
+    alignItems: 'center'
+  },
+  popularMetaNum: { 
+    fontSize: 12, 
+    color: '#6b7280', 
+    marginLeft: 6,
+    fontWeight: '500'
+  },
+  popularThumbImage: { 
+    width: 60, 
+    height: 60, 
+    borderRadius: 12,
+    marginLeft: 12
+  },
+  popularThumbPlaceholder: { 
+    width: 60, 
+    height: 60, 
+    borderRadius: 12, 
+    backgroundColor: '#f3f4f6',
+    marginLeft: 12,
+    justifyContent: 'center',
+    alignItems: 'center'
+  }
 });

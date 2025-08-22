@@ -151,64 +151,108 @@ export default function Profile() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f8f9fa', paddingTop: 16, paddingBottom: 16,paddingLeft:14, paddingRight: 14 },
+  root: { 
+    flex: 1, 
+    backgroundColor: '#f8fafc', 
+    paddingTop: 20, 
+    paddingBottom: 20,
+    paddingLeft: 16, 
+    paddingRight: 16 
+  },
 
   // 상단 환영 카드 (홈 카드 스타일과 톤 맞춤)
   welcomeCard: {
     backgroundColor: '#fff',
-    marginTop: 16,
-    marginBottom: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    borderRadius: 12,
+    marginTop: 20,
+    marginBottom: 24,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
-  userInfo: { flex: 1 },
-  welcomeText: { fontSize: 20, fontWeight: '700', color: '#111' },
-  userDetail: { fontSize: 14, color: '#666', marginTop: 4 },
+  userInfo: { 
+    flex: 1 
+  },
+  welcomeText: { 
+    fontSize: 22, 
+    fontWeight: '700', 
+    color: '#1e293b',
+    marginBottom: 4
+  },
+  userDetail: { 
+    fontSize: 15, 
+    color: '#64748b', 
+    fontWeight: '500'
+  },
   gearBtn: {
-    width: 34, height: 34, borderRadius: 17,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
+    width: 40, 
+    height: 40, 
+    borderRadius: 20,
+    alignItems: 'center', 
+    justifyContent: 'center',
+    backgroundColor: '#f1f5f9',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 
   // 섹션 제목
   sectionTitle: {
-    marginHorizontal: 12,
-    marginBottom: 10,
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '600',
+    marginHorizontal: 4,
+    marginBottom: 12,
+    marginTop: 16,
+    fontSize: 18,
+    color: '#374151',
+    fontWeight: '700',
   },
 
   // 리스트 박스 (배경은 투명, 항목만 구분선)
   listBox: {
-    marginHorizontal: 16,
-    marginBottom: 14,
-    backgroundColor: 'transparent',
+    marginHorizontal: 0,
+    marginBottom: 20,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
 
   // 항목
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 16,
   },
   itemDivider: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E5E7EB',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
   },
   itemIconWrap: {
-    width: 34, height: 34, borderRadius: 10,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center', justifyContent: 'center',
-    marginRight: 12,
+    width: 40, 
+    height: 40, 
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center', 
+    justifyContent: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  itemLabel: { fontSize: 16, color: '#111' },
+  itemLabel: { 
+    fontSize: 16, 
+    color: '#374151',
+    fontWeight: '500'
+  },
 });

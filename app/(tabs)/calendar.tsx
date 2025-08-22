@@ -210,28 +210,183 @@ export default function CalendarTab() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  calendarWrap: { backgroundColor: PASTEL_BLUE, paddingTop: 8, paddingBottom: 6 },
-  calendar: { height: 420, width: '100%', alignSelf: 'stretch', backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
-  todayBox: { flex: 1, paddingHorizontal: 16, paddingTop: 10 },
-  todayTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  todayEmpty: { color: '#8e8e93' },
-  eventRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
-  dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
-  eventText: { fontSize: 16 },
-  separator: { height: 1, backgroundColor: '#eee' },
-  modal: { justifyContent: 'flex-end', margin: 0 },
-  sheet: { backgroundColor: 'white', padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  sheetTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, height: 42, marginBottom: 12 },
-  colorLabel: { fontWeight: '600', marginBottom: 8 },
-  colorRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
-  colorBox: { width: 40, height: 40, borderRadius: 20, borderColor: '#000' },
-  addBtn: { backgroundColor: ACCENT_BLUE, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
-  addBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  savedRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, justifyContent: 'space-between' },
-  savedText: { fontSize: 16, flexShrink: 1 },
-  editBadge: { marginLeft: 8, fontSize: 12, color: '#fff', backgroundColor: '#111', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  deleteBtn: { backgroundColor: '#ff3b30', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginLeft: 8 },
-  deleteBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#f8fafc' 
+  },
+  calendarWrap: { 
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16, 
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    paddingTop: 16,
+    paddingBottom: 12
+  },
+  calendar: { 
+    height: 380, 
+    width: '100%', 
+    alignSelf: 'stretch', 
+    backgroundColor: 'transparent', 
+    borderRadius: 16
+  },
+  todayBox: { 
+    flex: 1, 
+    paddingHorizontal: 20, 
+    paddingTop: 16,
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3
+  },
+  todayTitle: { 
+    fontSize: 20, 
+    fontWeight: '700', 
+    marginBottom: 16,
+    color: '#1e293b'
+  },
+  todayEmpty: { 
+    color: '#64748b',
+    fontSize: 16,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20
+  },
+  eventRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+    marginBottom: 8,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3b82f6'
+  },
+  dot: { 
+    width: 12, 
+    height: 12, 
+    borderRadius: 6, 
+    marginRight: 12
+  },
+  eventText: { 
+    fontSize: 16,
+    color: '#374151',
+    fontWeight: '500'
+  },
+  separator: { 
+    height: 1, 
+    backgroundColor: '#e5e7eb',
+    marginVertical: 4
+  },
+  modal: { 
+    justifyContent: 'flex-end', 
+    margin: 0 
+  },
+  sheet: { 
+    backgroundColor: 'white', 
+    padding: 24, 
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24,
+    minHeight: 300
+  },
+  sheetTitle: { 
+    fontSize: 20, 
+    fontWeight: '700', 
+    marginBottom: 20,
+    color: '#1e293b',
+    textAlign: 'center'
+  },
+  input: { 
+    borderWidth: 2, 
+    borderColor: '#e5e7eb', 
+    borderRadius: 12, 
+    paddingHorizontal: 16, 
+    height: 48, 
+    marginBottom: 16,
+    fontSize: 16,
+    backgroundColor: '#f8fafc'
+  },
+  colorLabel: { 
+    fontWeight: '600', 
+    marginBottom: 12,
+    fontSize: 16,
+    color: '#374151'
+  },
+  colorRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: 20
+  },
+  colorBox: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 22, 
+    borderColor: '#d1d5db',
+    borderWidth: 2
+  },
+  addBtn: { 
+    backgroundColor: '#3b82f6', 
+    paddingVertical: 16, 
+    borderRadius: 12, 
+    alignItems: 'center',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4
+  },
+  addBtnText: { 
+    color: '#fff', 
+    fontWeight: '700', 
+    fontSize: 16 
+  },
+  savedRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 12, 
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+    marginBottom: 8,
+    borderRadius: 12
+  },
+  savedText: { 
+    fontSize: 16, 
+    flexShrink: 1,
+    color: '#374151',
+    fontWeight: '500'
+  },
+  editBadge: { 
+    marginLeft: 12, 
+    fontSize: 12, 
+    color: '#fff', 
+    backgroundColor: '#6366f1', 
+    paddingHorizontal: 8, 
+    paddingVertical: 4, 
+    borderRadius: 8,
+    fontWeight: '600'
+  },
+  deleteBtn: { 
+    backgroundColor: '#ef4444', 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
+    borderRadius: 8, 
+    marginLeft: 12
+  },
+  deleteBtnText: { 
+    color: '#fff', 
+    fontSize: 12, 
+    fontWeight: '600' 
+  },
 })
