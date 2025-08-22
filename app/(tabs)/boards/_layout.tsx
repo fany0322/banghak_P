@@ -15,6 +15,12 @@ export default function BoardStackLayout() {
         options={{ title: "" }} // 뒤로가기만 표시
       />
 
+      {/* 게시글 상세 */}
+      <Stack.Screen
+        name="[boardId]/[PostId]"
+        options={{ title: "게시글" }}
+      />
+
       {/* 글쓰기 */}
       <Stack.Screen
         name="[boardId]/write"

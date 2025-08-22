@@ -15,9 +15,6 @@ import {
   View,
 } from "react-native";
 
-// ✅ 서버 API 엔드포인트만 바꿔서 사용
-const BASE_URL = "https://example.com/api";
-
 type Post = {
   id: string | number;
   boardId: string | number;
@@ -46,10 +43,8 @@ export default function BoardDetail() {
   const { boardId } = useLocalSearchParams<{ boardId: string }>();
   const router = useRouter();
   const navigation = useNavigation();
-  const { posts: localPosts } = usePosts();
+  const { posts: contextPosts, getPosts, isLoading } = usePosts();
 
-  const [serverPosts, setServerPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState(q);
@@ -59,59 +54,68 @@ export default function BoardDetail() {
     navigation.setOptions?.({ headerShown: true });
   }, [navigation]);
 
-  // --- 서버에서 게시글 불러오기
-  const fetchFromServer = useCallback(async () => {
-    setLoading(true); // move here for more accurate loading state
+  // 보드 ID에 따른 카테고리 매핑 (백엔드와 일치하도록 수정)
+  const categoryMap: Record<string, string> = {
+    '1': '', // 전체 게시글 (카테고리 필터 없음)
+    '2': 'general',
+    '3': 'question', 
+    '4': 'general'
+  };
+
+  const category = categoryMap[String(boardId)] || '';
+
+  // --- PostContext를 사용해서 게시글 불러오기
+  const loadPosts = useCallback(async () => {
     try {
-      const res = await fetch(`${BASE_URL}/boards/${boardId}/posts`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: Post[] = await res.json();
-      setServerPosts(data);
+      console.log('Loading posts for boardId:', boardId, 'category:', category);
+      await getPosts(category, 'latest');
     } catch (e) {
-      console.warn("fetchFromServer error:", e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      console.warn('Failed to load posts:', e);
     }
-  }, [boardId]);
+  }, [getPosts, category, boardId]);
 
-  // 최초 로드
+  // 최초 로드만 (한 번만)
   useEffect(() => {
-    fetchFromServer();
-  }, [fetchFromServer]);
+    let mounted = true;
+    const load = async () => {
+      if (mounted) {
+        await loadPosts();
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [category]);
 
-  // 화면 복귀 시 동기화
-  useFocusEffect(
-    useCallback(() => {
-      fetchFromServer();
-    }, [fetchFromServer])
-  );
+  // 화면 복귀 시 새로고침 제거 (수동으로만)
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     // 이미 로드된 상태라면 스킵
+  //     if (contextPosts.length > 0) return;
+  //     loadPosts();
+  //   }, [loadPosts, contextPosts.length])
+  // );
 
-  // 자동 새로고침(폴링) - 10초
-  useEffect(() => {
-    const t = setInterval(fetchFromServer, 10000);
-    return () => clearInterval(t);
-  }, [fetchFromServer]);
+  // 폴링 제거 - 수동 새로고침으로 대체
+  // useEffect(() => {
+  //   const t = setInterval(loadPosts, 30000);
+  //   return () => clearInterval(t);
+  // }, [loadPosts]);
 
-  // 컨텍스트(로컬 글) + 서버 글 합치고 최신순, 같은 글은 덮어쓰기
-  const merged = useMemo(() => {
-    const map = new Map<string, Post>();
-    const key = (p: Post) => `${p.boardId}-${p.id}`;
-
-    // 서버 글
-    serverPosts
-      .filter(p => String(p.boardId) === String(boardId))
-      .forEach(p => map.set(key(p), p));
-
-    // 로컬 글(같은 보드)
-    (localPosts as any[])
-      .filter(p => String(p.boardId) === String(boardId))
-      .forEach((p: Post) => map.set(key(p), p));
-
-    const arr = Array.from(map.values());
-    arr.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return arr;
-  }, [serverPosts, localPosts, boardId]);
+  // 백엔드 posts를 로컬 형식에 맞게 변환
+  const formattedPosts = useMemo(() => {
+    const formatted = contextPosts.map((post: any) => ({
+      id: post.id,
+      boardId: boardId,
+      title: post.title,
+      content: post.content,
+      createdAt: post.created_at || post.createdAt || new Date().toISOString(),
+      likes: post.upvotes || post.likes || 0,
+      comments: Array(post.comment_count || 0).fill(0).map((_, i) => ({ id: i })),
+      thumbnailUrl: null
+    }));
+    console.log('Formatted posts:', formatted.map(p => ({ id: p.id, title: p.title })));
+    return formatted;
+  }, [contextPosts, boardId]);
 
   // Debounce search input
   useEffect(() => {
@@ -125,23 +129,27 @@ export default function BoardDetail() {
   // 검색
   const data = useMemo(() => {
     const s = debouncedQ.trim().toLowerCase();
-    if (!s) return merged;
-    return merged.filter(
+    if (!s) return formattedPosts;
+    return formattedPosts.filter(
       p =>
         (p.title ?? "").toLowerCase().includes(s) ||
         (p.content ?? "").toLowerCase().includes(s)
     );
-  }, [debouncedQ, merged]);
+  }, [debouncedQ, formattedPosts]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    fetchFromServer();
+    await loadPosts();
+    setRefreshing(false);
   };
 
   const renderItem = ({ item }: { item: Post }) => (
     <Pressable
       style={styles.card}
-      onPress={() => router.push(`/boards/${boardId}/${item.id}`)}
+      onPress={() => {
+        console.log('Post clicked:', { boardId, postId: item.id, item });
+        router.push(`/boards/${boardId}/${item.id}`);
+      }}
     >
       <View style={{ flex: 1, paddingRight: item.thumbnailUrl ? 12 : 0 }}>
         <Text style={styles.title} numberOfLines={1}>
@@ -199,7 +207,7 @@ export default function BoardDetail() {
 
       {/* 리스트 */}
       <View style={{ flex: 1 }}>
-        {loading ? (
+        {isLoading && !refreshing ? (
           <ActivityIndicator style={{ marginTop: 32 }} />
         ) : (
           <FlatList

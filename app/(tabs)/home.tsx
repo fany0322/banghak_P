@@ -2,24 +2,17 @@
 import { useEventsStore } from '@/stores/eventsStore'; // 전역 스토어 (캘린더 연동)
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { ActivityIndicator, Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '@/context/AuthContext';
+import { apiService } from '@/services/api';
 
-// ====== 타입 & 서버 모킹 ======
-type ServerEvent = { id: string; title: string; dateISO: string };
-
-async function fetchUpcomingEventsFromServer(): Promise<ServerEvent[]> {
-  // 네트워크 지연 흉내
-  await new Promise((r) => setTimeout(r, 300));
-  // 서버에서 ISO 날짜로 내려온다고 가정
-  return [
-    { id: 'e1', title: '영어 수행평가 (말하기)', dateISO: '2025-07-24' },
-    { id: 'e2', title: '영어 수행평가 (쓰기)', dateISO: '2025-07-25' },
-    { id: 'e3', title: '엄청나게 긴 이름의 수행평가를 적으면 말을 줄이기 (말을 줄이기)', dateISO: '2025-08-01' },
-    { id: 'e4', title: '동아리 발표', dateISO: '2025-07-30' },
-    { id: 'e5', title: '모의고사', dateISO: '2025-07-27' },
-  ];
-}
+// ====== 타입 정의 ======
+type EventItem = {
+  id: string;
+  title: string;
+  dateISO: string;
+};
 
 // ====== 유틸 ======
 function toDisplayMD(dateISO: string) {
@@ -41,61 +34,174 @@ function monthKey(dateISO: string) {
   const d = new Date(dateISO);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; // ex) 2025-07
 }
-function isSameOrAfterToday(dateISO: string) {
-  const today = new Date();
-  const target = new Date(dateISO);
-  const a = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  const b = new Date(target.getFullYear(), target.getMonth(), target.getDate()).getTime();
-  return b >= a;
-}
 
-// ====== 오늘의 시간표 더미 ======
-const todaySchedule = [
-  { time: '08:40', subject: '수학' },
-  { time: '09:40', subject: '문학' },
-  { time: '10:40', subject: '영어' },
-  { time: '11:40', subject: '통사' },
-  { time: '13:30', subject: '시디' },
-  { time: '14:30', subject: '시디' },
-  { time: '15:30', subject: '국사' },
+// ====== 시간대 매핑 ======
+const periodTimes = [
+  '08:40', '09:40', '10:40', '11:40', 
+  '13:30', '14:30', '15:30'
 ];
 
-// ====== 인기 게시물 더미 ======
-const popularPosts = [
-  { id: 'p1', title: '글제목제목', excerpt: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed ㅁㅇㄹdo eiu..ㅁㄴㅇㄻㄴㄹㄴㅁㄻㄴ.', minutesAgo: 1, comments: 0, likes: 9, thumbnail: null },
-  { id: 'p2', title: '글제목제목', excerpt: '짧은 요약문이 들어갑니다...', minutesAgo: 5, comments: 3, likes: 12, thumbnail: null },
-  { id: 'p3', title: '글제목제목', excerpt: '다른 게시물 요약...', minutesAgo: 22, comments: 1, likes: 4, thumbnail: null },
-];
+// ====== 인기 게시물 타입 ======
+type PopularPost = {
+  id: number;
+  title: string;
+  excerpt: string;
+  minutesAgo: number;
+  comments: number;
+  likes: number;
+  thumbnail: string | null;
+};
 
 export default function Home() {
   const router = useRouter();
+  const { user, isLoggedIn } = useAuth();
   const { bulkImportFromServer, setSelectedDate } = useEventsStore(); // 캘린더 연동
 
   // Home 카드 전용 상태
-  const [events, setEvents] = useState<ServerEvent[] | null>(null);
+  const [events, setEvents] = useState<EventItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
+  const [todaySchedule, setTodaySchedule] = useState<{ time: string; subject: string }[]>([]);
+  const [timetableLoading, setTimetableLoading] = useState(false);
+  const [popularPosts, setPopularPosts] = useState<PopularPost[]>([]);
+  const [popularLoading, setPopularLoading] = useState(false);
 
-  // “예정된 일정 >” 클릭 시 서버에서 로드 + 스토어 동기화
+  // "예정된 일정 >" 클릭 시 서버에서 로드 + 스토어 동기화
   const handleOpenUpcoming = useCallback(async () => {
+    if (!isLoggedIn) return;
+    
     setLoading(true);
     try {
-      const data = await fetchUpcomingEventsFromServer();
-      const upcoming = data
-        .filter((e) => isSameOrAfterToday(e.dateISO))
+      // 백엔드에서 과제 데이터 가져오기
+      const assignments = await apiService.getUpcomingAssignments();
+      
+      // EventItem 형식으로 변환
+      const events: EventItem[] = assignments
+        .filter(assignment => {
+          // 마감일이 지나지 않은 과제만 필터링
+          const dueDate = new Date(assignment.due_date);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          return dueDate >= today;
+        })
+        .map(assignment => ({
+          id: assignment.id.toString(),
+          title: `${assignment.subject} - ${assignment.title}`,
+          dateISO: assignment.due_date.split('T')[0] // ISO 날짜 부분만 추출
+        }))
         .sort((a, b) => +new Date(a.dateISO) - +new Date(b.dateISO));
 
-      setEvents(upcoming);
+      setEvents(events);
 
       // 전역 스토어(캘린더)에 입력
-      bulkImportFromServer(upcoming);
-      if (upcoming[0]) setSelectedDate(upcoming[0].dateISO);
+      bulkImportFromServer(events);
+      if (events[0]) setSelectedDate(events[0].dateISO);
 
       setExpandedMonth(null); // 기본은 3개 모드
+    } catch (error) {
+      console.error('Failed to load upcoming events:', error);
+      setEvents([]);
     } finally {
       setLoading(false);
     }
-  }, [bulkImportFromServer, setSelectedDate]);
+  }, [bulkImportFromServer, setSelectedDate, isLoggedIn]);
+
+  // 오늘의 시간표 로드
+  const loadTodaySchedule = useCallback(async () => {
+    if (!isLoggedIn) return;
+    
+    try {
+      setTimetableLoading(true);
+      const result = await apiService.getTimetable();
+      
+      // 오늘 요일 계산 (0=월요일, 6=일요일)
+      const today = new Date();
+      const dayOfWeek = (today.getDay() + 6) % 7; // JS는 0=일요일이므로 월요일=0으로 변환
+      
+      const days = ['월', '화', '수', '목', '금', '토', '일'];
+      const todayName = days[dayOfWeek];
+      
+      const todayTimetable = result.timetable[todayName] || {};
+      
+      // 시간표를 배열로 변환
+      const schedule = [];
+      for (let period = 1; period <= 7; period++) {
+        const classInfo = todayTimetable[period];
+        if (classInfo) {
+          schedule.push({
+            time: periodTimes[period - 1] || `${period}교시`,
+            subject: classInfo.subject_name
+          });
+        }
+      }
+      
+      setTodaySchedule(schedule);
+    } catch (error) {
+      console.error('Failed to load timetable:', error);
+      // 에러 시 빈 배열 설정
+      setTodaySchedule([]);
+    } finally {
+      setTimetableLoading(false);
+    }
+  }, [isLoggedIn]);
+
+  // 인기 게시물 로드
+  const loadPopularPosts = useCallback(async () => {
+    try {
+      setPopularLoading(true);
+      // 인기 정렬로 게시글 가져오기 (상위 3개만)
+      const result = await apiService.getPosts(1, '', 'popular');
+      
+      // PopularPost 형식으로 변환
+      const formatted: PopularPost[] = result.posts.slice(0, 3).map(post => {
+        // 게시 시간으로부터 몇 분 전인지 계산
+        const now = new Date();
+        const postTime = new Date(post.created_at);
+        const diffMs = now.getTime() - postTime.getTime();
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        
+        return {
+          id: post.id,
+          title: post.title,
+          excerpt: post.content.length > 80 ? post.content.substring(0, 80) + '...' : post.content,
+          minutesAgo: diffMinutes,
+          comments: post.comment_count ?? 0,
+          likes: post.upvotes ?? 0,
+          thumbnail: null // 추후 이미지 지원 시 추가
+        };
+      });
+      
+      setPopularPosts(formatted);
+    } catch (error) {
+      console.error('Failed to load popular posts:', error);
+      setPopularPosts([]);
+    } finally {
+      setPopularLoading(false);
+    }
+  }, []);
+
+  // 컴포넌트 마운트 시 인기 게시물 로드
+  useEffect(() => {
+    loadPopularPosts();
+  }, [loadPopularPosts]);
+
+  // 로그인 상태 변경 시 시간표 로드
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadTodaySchedule();
+    } else {
+      setTodaySchedule([]);
+    }
+  }, [isLoggedIn, loadTodaySchedule]);
+
+  // 로그인 상태 변경 시 예정된 일정 로드
+  useEffect(() => {
+    if (isLoggedIn) {
+      handleOpenUpcoming();
+    } else {
+      setEvents(null);
+    }
+  }, [isLoggedIn, handleOpenUpcoming]);
 
   // 파생 리스트
   const top3 = useMemo(() => (events ? events.slice(0, 3) : []), [events]);
@@ -109,26 +215,60 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.rootContainer}>
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-        {/* 환영 메시지 */}
-        <Text style={styles.welcomeText}>환영합니다 000님</Text>
+        {/* 환영 메시지 & 로그인 버튼 */}
+        <View style={styles.welcomeSection}>
+          {isLoggedIn ? (
+            <Text style={styles.welcomeText}>환영합니다 {user?.name || '사용자'}님</Text>
+          ) : (
+            <View style={styles.loginPrompt}>
+              <Text style={styles.welcomeText}>환영합니다</Text>
+              <Pressable 
+                style={styles.loginButton}
+                onPress={() => router.push('/login')}
+              >
+                <Ionicons name="log-in-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
+                <Text style={styles.loginButtonText}>로그인</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
 
         {/* 오늘의 시간표 카드 */}
         <View style={styles.scheduleCard}>
           <View style={styles.scheduleHeader}>
-            <Text style={styles.classInfoText}>2학년 10반</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.classInfoText}>
+              {user?.grade && user?.class_num 
+                ? `${user.grade}학년 ${user.class_num}반` 
+                : '학급 정보 없음'}
+            </Text>
+            <Pressable 
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+              onPress={() => router.push('/timetable')}
+            >
               <Ionicons name="book" size={20} color="#3B82F6" style={{ marginRight: 4 }} />
               <Text style={styles.scheduleTitle}>오늘 시간표 &gt;</Text>
-            </View>
+            </Pressable>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.periodsRow}>
-            {todaySchedule.map((row, i) => (
-              <View key={i} style={styles.periodItem}>
-                <Text style={styles.periodTime}>{row.time}</Text>
-                <Text style={styles.periodSubject}>{row.subject}</Text>
-              </View>
-            ))}
-          </ScrollView>
+          {timetableLoading ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="small" />
+            </View>
+          ) : todaySchedule.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.periodsRow}>
+              {todaySchedule.map((row, i) => (
+                <View key={i} style={styles.periodItem}>
+                  <Text style={styles.periodTime}>{row.time}</Text>
+                  <Text style={styles.periodSubject}>{row.subject}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#666', fontSize: 14 }}>
+                {isLoggedIn ? '오늘 시간표가 없습니다' : '로그인 후 시간표를 확인하세요'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* 예정된 일정 카드 */}
@@ -245,7 +385,23 @@ export default function Home() {
 // ====== 스타일 ======
 const styles = StyleSheet.create({
   rootContainer: { flex: 1, backgroundColor: '#f8f9fa' },
-  welcomeText: { fontSize: 24, fontWeight: 'bold', marginTop: 24, marginBottom: 16, paddingHorizontal: 20 },
+  welcomeSection: { marginTop: 24, marginBottom: 16, paddingHorizontal: 20 },
+  welcomeText: { fontSize: 24, fontWeight: 'bold' },
+  loginPrompt: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  loginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  loginButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 
   eventCard: {
     backgroundColor: '#fff',

@@ -2,9 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Image, Pressable, RefreshControl, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
+import { usePosts } from "@/context/PostContext";
+import { Post } from "@/services/api";
 
 type PopularPost = {
-  id: string;
+  id: number;
   title: string;
   excerpt: string;
   likes: number;
@@ -17,41 +19,61 @@ const NOTICE = { title: "공지 사항", desc: "인기 게시물은 최근 24시
 
 export default function PopularList() {
   const router = useRouter();
-  const [list, setList] = useState<PopularPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { posts, getPosts, isLoading } = usePosts();
   const [refreshing, setRefreshing] = useState(false);
   const [q, setQ] = useState("");
 
+  // 백엔드에서 인기 게시물 가져오기 (조회수와 투표 점수 기준으로 정렬)
   const fetchPopular = useCallback(async () => {
     try {
-      // 실제 서버 연동 시 여기를 교체하세요
-      const data: PopularPost[] = [
-        { id: "p1", title: "글제목제목", excerpt: "Lorem ipsum dolor sit amet, consectetur...", likes: 200, comments: 8, createdAt: new Date().toISOString(), thumbnail: "https://picsum.photos/seed/1/300/200" },
-        { id: "p2", title: "글제목제목2", excerpt: "짧은 요약문이 들어갑니다...", likes: 120, comments: 3, createdAt: new Date().toISOString(), thumbnail: null },
-        { id: "p3", title: "글제목제목3", excerpt: "다른 게시물 요약...", likes: 77, comments: 5, createdAt: new Date().toISOString(), thumbnail: "https://picsum.photos/seed/2/300/200" },
-      ];
-      setList(data);
+      setRefreshing(true);
+      await getPosts('', 'popular'); // popular 정렬로 요청
     } catch (e) {
-      console.warn(e);
+      console.warn('Failed to fetch popular posts:', e);
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
+  }, [getPosts]);
+
+  // 백엔드 데이터를 PopularPost 형식으로 변환
+  const popularPosts = useMemo(() => {
+    return posts
+      .filter(post => post.upvotes > 0) // 최소 1개 이상의 추천이 있는 게시물
+      .sort((a, b) => {
+        // 투표 점수 + 조회수를 기준으로 정렬
+        const scoreA = (a.upvotes || 0) - (a.downvotes || 0) + (a.view_count || 0) * 0.1;
+        const scoreB = (b.upvotes || 0) - (b.downvotes || 0) + (b.view_count || 0) * 0.1;
+        return scoreB - scoreA;
+      })
+      .slice(0, 20) // 상위 20개만
+      .map((post): PopularPost => ({
+        id: post.id,
+        title: post.title,
+        excerpt: post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content,
+        likes: post.upvotes || 0,
+        comments: post.comment_count || 0,
+        createdAt: post.created_at,
+        thumbnail: null // 추후 이미지 지원시 추가
+      }));
+  }, [posts]);
+
+  useEffect(() => {
+    fetchPopular();
   }, []);
 
-  useEffect(() => { fetchPopular(); }, [fetchPopular]);
-  useEffect(() => {
-    const t = setInterval(fetchPopular, 10000);
-    return () => clearInterval(t);
-  }, [fetchPopular]);
+  // 폴링 제거 - 수동 새로고침만 지원
+  // useEffect(() => {
+  //   const t = setInterval(fetchPopular, 10000);
+  //   return () => clearInterval(t);
+  // }, [fetchPopular]);
 
   const data = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return list;
-    return list.filter(p => p.title.toLowerCase().includes(s) || p.excerpt.toLowerCase().includes(s));
-  }, [q, list]);
+    if (!s) return popularPosts;
+    return popularPosts.filter(p => p.title.toLowerCase().includes(s) || p.excerpt.toLowerCase().includes(s));
+  }, [q, popularPosts]);
 
-  if (loading) {
+  if (isLoading && !refreshing && popularPosts.length === 0) {
     return (
       <SafeAreaView style={[pStyles.container, { alignItems:"center", justifyContent:"center" }]}>
         <ActivityIndicator />
@@ -103,11 +125,11 @@ export default function PopularList() {
 
       <FlatList
         data={data}
-        keyExtractor={(it) => it.id}
+        keyExtractor={(it) => String(it.id)}
         renderItem={renderItem}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPopular(); }} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchPopular} />}
         ListEmptyComponent={<Text style={{ color:"#666", padding:24 }}>게시글이 없습니다.</Text>}
       />
 

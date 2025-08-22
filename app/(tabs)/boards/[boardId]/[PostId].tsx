@@ -1,25 +1,30 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
-import React, { useMemo } from "react";
-import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useMemo, useEffect, useState } from "react";
+import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import { usePosts } from "../../../../context/PostContext";
+import { apiService, Post as ApiPost, Comment } from "../../../../services/api";
 
 // string | string[] | undefined → string | undefined
 const norm = (v: string | string[] | undefined) =>
   v == null ? undefined : (Array.isArray(v) ? v[0] : v).trim();
 
 export default function PostDetail() {
-  // 혹시 index에서 id로 보냈을 가능성까지 방어
+  // 파일명이 [PostId].tsx이므로 PostId로 받아야 함
   const raw = useLocalSearchParams<{
     boardId?: string | string[];
-    postId?: string | string[];
-    id?: string | string[]; // fallback
+    PostId?: string | string[];
+    postId?: string | string[]; // 호환성을 위한 fallback
+    id?: string | string[]; // 추가 fallback
   }>();
 
   const boardId = norm(raw.boardId);
-  const postId = norm(raw.postId ?? raw.id); // postId가 없으면 id로 받기
+  const postId = norm(raw.PostId ?? raw.postId ?? raw.id); // PostId 우선, fallback으로 postId, id
 
-  const { posts, toggleLike } = usePosts();
+  const { votePost } = usePosts();
+  const [post, setPost] = useState<(ApiPost & { comments: Comment[] }) | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // 디버깅용(문제 계속되면 로그 보고 index 쪽 수정)
   console.log("params:", raw, "->", { boardId, postId });
@@ -34,17 +39,44 @@ export default function PostDetail() {
     }
   }, [boardId]);
 
-  const post = posts.find(
-    (p) => String(p.id) === String(postId) && String(p.boardId) === String(boardId)
-  );
+  // 백엔드에서 게시글 가져오기
+  useEffect(() => {
+    const fetchPost = async () => {
+      if (!postId) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        const postData = await apiService.getPost(Number(postId));
+        setPost(postData);
+      } catch (err: any) {
+        console.error('Failed to fetch post:', err);
+        setError(err.message || '게시글을 불러오는데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (!post) {
+    fetchPost();
+  }, [postId]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[s.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" />
+        <Text style={{ marginTop: 8 }}>게시글을 불러오는 중...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !post) {
     return (
       <SafeAreaView style={s.container}>
         <Text>게시글을 찾을 수 없습니다 😥</Text>
         <Text style={{ color: "#888", marginTop: 6 }}>
           boardId={String(boardId)} / postId={String(postId)}
         </Text>
+        {error && <Text style={{ color: "#ff0000", marginTop: 6 }}>{error}</Text>}
       </SafeAreaView>
     );
   }
@@ -58,34 +90,70 @@ export default function PostDetail() {
         <View style={s.metaRow}>
           <Text style={s.metaText}>{post.author ?? "익명"}</Text>
           <Text style={s.dot}>·</Text>
-          <Text style={s.metaText}>{post.date ?? ""}</Text>
+          <Text style={s.metaText}>{new Date(post.created_at).toLocaleDateString()}</Text>
         </View>
 
         <Text style={s.bodyText}>{post.content}</Text>
-        {post.image ? <Image source={{ uri: post.image }} style={s.heroImage} /> : null}
 
         <View style={s.votesRow}>
-          <Pressable style={s.voteBox} onPress={() => toggleLike(post.id)}>
-            <Ionicons name="thumbs-up-outline" size={22} />
+          <Pressable 
+            style={[s.voteBox, { marginRight: 12 }]} 
+            onPress={async () => {
+              try {
+                // upvote
+                const result = await apiService.votePost(post.id, true);
+                setPost(prev => prev ? {
+                  ...prev,
+                  upvotes: result.upvotes,
+                  downvotes: result.downvotes,
+                  vote_score: result.vote_score
+                } : null);
+              } catch (error) {
+                console.error('Vote failed:', error);
+              }
+            }}
+          >
+            <Ionicons name="thumbs-up-outline" size={22} color="#ff4444" />
+          </Pressable>
+          
+          <Pressable 
+            style={s.voteBox} 
+            onPress={async () => {
+              try {
+                // downvote
+                const result = await apiService.votePost(post.id, false);
+                setPost(prev => prev ? {
+                  ...prev,
+                  upvotes: result.upvotes,
+                  downvotes: result.downvotes,
+                  vote_score: result.vote_score
+                } : null);
+              } catch (error) {
+                console.error('Vote failed:', error);
+              }
+            }}
+          >
+            <Ionicons name="thumbs-down-outline" size={22} color="#4444ff" />
           </Pressable>
         </View>
         <View style={s.voteCounts}>
-          <Text style={s.voteNum}>{post.likes}</Text>
+          <Text style={[s.voteNum, { color: '#ff4444' }]}>👍 {post.upvotes || 0}</Text>
+          <Text style={[s.voteNum, { color: '#4444ff', marginLeft: 16 }]}>👎 {post.downvotes || 0}</Text>
         </View>
 
         <Text style={s.commentHeader}>댓글 {post.comments?.length ?? 0}개</Text>
-        {post.comments?.map((c: any) => (
-          <View key={c.id} style={[s.commentCard, c.depth === 1 && s.replyCard]}>
+        {post.comments?.map((c: Comment) => (
+          <View key={c.id} style={[s.commentCard, c.parent_id && s.replyCard]}>
             <View style={s.commentTop}>
-              <Text style={s.commentName}>{c.name ?? "익명"}</Text>
+              <Text style={s.commentName}>{c.author ?? "익명"}</Text>
               <Pressable hitSlop={8}><Ionicons name="ellipsis-vertical" size={16} color="#777" /></Pressable>
             </View>
-            <Text style={s.commentBody}>{c.text}</Text>
+            <Text style={s.commentBody}>{c.content}</Text>
             <View style={s.commentMeta}>
-              <Text style={s.commentDate}>{c.date ?? ""}</Text>
+              <Text style={s.commentDate}>{new Date(c.created_at).toLocaleDateString()}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", marginLeft: 12 }}>
                 <Ionicons name="heart-outline" size={14} color="#ff3b30" />
-                <Text style={s.commentLike}>{c.like ?? 0}</Text>
+                <Text style={s.commentLike}>0</Text>
               </View>
             </View>
           </View>
