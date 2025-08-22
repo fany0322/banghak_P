@@ -51,6 +51,7 @@ type PopularPost = {
   comments: number;
   likes: number;
   thumbnail: string | null;
+  category: string;
 };
 
 export default function Home() {
@@ -62,6 +63,16 @@ export default function Home() {
     setSelectedDate, 
     loadEventsFromServer 
   } = useEventsStore(); // 캘린더 연동
+
+  // 카테고리를 boardId로 매핑하는 함수
+  const getCategoryBoardId = (category: string): string => {
+    switch (category) {
+      case 'general': return 'free';
+      case 'question': return 'qna';
+      case 'study': return 'study';
+      default: return 'free';
+    }
+  };
 
   // Home 카드 전용 상태
   const [events, setEvents] = useState<EventItem[] | null>(null);
@@ -208,7 +219,8 @@ export default function Home() {
           minutesAgo: diffMinutes,
           comments: post.comment_count ?? 0,
           likes: post.upvotes ?? 0,
-          thumbnail: null // 추후 이미지 지원 시 추가
+          thumbnail: null, // 추후 이미지 지원 시 추가
+          category: post.category
         };
       });
       
@@ -394,7 +406,7 @@ export default function Home() {
         <View style={styles.popularCard}>
           <View style={styles.popularHeaderRow}>
             <Ionicons name="flame-outline" size={18} color="#111" style={{ marginRight: 6 }} />
-            <Pressable onPress={() => router.push('/(tabs)/popular')}>
+            <Pressable onPress={() => router.push('/boards/hot')}>
               <Text style={styles.popularHeaderText}>인기 게시물 &gt;</Text>
             </Pressable>
           </View>
@@ -402,7 +414,16 @@ export default function Home() {
           {popularPosts.map((post, i) => (
             <Pressable
               key={post.id}
-              onPress={() => router.push({ pathname: '/popular/[postId]', params: { postId: post.id }, })}
+              onPress={() => {
+                const boardId = getCategoryBoardId(post.category);
+                router.push({ 
+                  pathname: '/boards/[boardId]/[PostId]', 
+                  params: { 
+                    boardId: boardId, 
+                    PostId: post.id.toString() 
+                  } 
+                });
+              }}
               style={[styles.popularItemRow, i !== 0 && styles.popularItemDivider]}
             > 
               <View style={{ flex: 1, paddingRight: 12 }}>
